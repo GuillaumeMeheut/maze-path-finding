@@ -7,9 +7,20 @@ type Props = {
 
 type Maze = any[][];
 
+type Coordinates = {
+  x: number;
+  y: number;
+};
+
+type Node = {
+  distance: number;
+  pos: Coordinates;
+};
+
 export default function Maze({ dimension }: Props) {
   const [maze, setMaze] = useState<Maze>([]);
-  const [clickCoordinates, setClickCoordinates] = useState({ x: 0, y: 0 });
+  const [startNode, setStartNode] = useState({ x: 0, y: 0 });
+  const [endNode, setEndNode] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState<any>({ w: 0, h: 0 });
 
   function generateMaze() {
@@ -17,22 +28,70 @@ export default function Maze({ dimension }: Props) {
     for (let y = 0; y < dimension; y++) {
       const tab = [];
       for (let x = 0; x < dimension; x++) {
-        tab.push({ x, y, isWall: isWall() });
+        tab.push({
+          x,
+          y,
+          isWall: isWall(),
+          distance: calculDistance(x, y, startNode.x, startNode.y),
+        });
       }
       maze.push(tab);
     }
     setMaze(maze);
   }
 
+  // function findPath(
+  //   currentNode?: Node,
+  //   startNode: Coordinates,
+  //   endNode: Coordinates
+  // ) {
+  //   if (currentNode === endNode) return [];
+  //   const closedNode = findPath(currentNode, startNode, endNode);
+  // }
+
+  // findPath({ x: 1, y: 2 }, { x: 1, y: 2 });
+
   function isWall(): boolean {
     return Math.floor(Math.random() * 5) === 1;
   }
+
   function setCoordinates(x: number, y: number) {
-    setClickCoordinates({ x, y });
+    setStartNode({ x: endNode.x, y: endNode.y });
+    setEndNode({ x, y });
+    setDistance();
   }
 
-  function matchCoordinates(x: number, y: number): boolean {
-    return clickCoordinates.x === x && clickCoordinates.y === y;
+  //A revoir pour match le startNode et le endNode
+  function matchCoordinates(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+  ): boolean {
+    return x1 === x2 && y1 === y2;
+  }
+
+  function calculDistance(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+  ): number {
+    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+  }
+
+  function setDistance() {
+    const newMaze = [...maze];
+    newMaze.map((row) =>
+      row.map(
+        (node) =>
+          (node.distance =
+            calculDistance(node.x, node.y, startNode.x, startNode.y) -
+            calculDistance(node.x, node.y, endNode.x, endNode.y))
+      )
+    );
+
+    setMaze(newMaze);
   }
 
   function onResize() {
@@ -41,8 +100,6 @@ export default function Maze({ dimension }: Props) {
 
     setSize({ w: width, h: height });
   }
-
-  console.log(size);
 
   useEffect(() => {
     generateMaze();
@@ -57,22 +114,24 @@ export default function Maze({ dimension }: Props) {
     <div className={css.maze}>
       {maze.map((row, index) => (
         <div key={index} className={css.row}>
-          {row.map((info) => (
+          {row.map((node) => (
             <span
-              key={JSON.stringify(info)}
+              key={JSON.stringify(node)}
               onClick={() =>
-                info.isWall ? null : setCoordinates(info.x, info.y)
+                node.isWall ? null : setCoordinates(node.x, node.y)
               }
               style={{
-                backgroundColor: info.isWall
+                backgroundColor: node.isWall
                   ? "grey"
-                  : matchCoordinates(info.x, info.y)
+                  : matchCoordinates(node.x, node.y, startNode.x, startNode.y)
                   ? "blue"
                   : "red",
                 width: `${size.w}px`,
                 height: `${size.h}px`,
               }}
-            />
+            >
+              {node.distance}
+            </span>
           ))}
         </div>
       ))}
